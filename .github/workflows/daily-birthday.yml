@@ -1,0 +1,46 @@
+name: Daily Birthday Wisher
+
+on:
+  schedule:
+    # Runs daily at 13:00 UTC (~9:00 AM Toronto during EDT; 8:00 AM during EST)
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}  # manual run button
+
+permissions:
+  contents: write   # needed if you want to commit updated data.xlsx
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run script
+        env:
+          GMAIL_ID: ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py
+
+      # Optional: commit data.xlsx if it changed
+      - name: Commit changes (if any)
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore: update data.xlsx [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
