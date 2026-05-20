@@ -36,9 +36,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: uv pip install -r requirements.txt --system
-
       - name: Run birthday wisher
         env:
           GMAIL_ID: ${{ secrets.GMAIL_ID }}
@@ -46,7 +43,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           OVERRIDE_DATE: ${{ inputs.override_date || '' }}
           FORCE_RESEND: ${{ inputs.force_resend || 'false' }}
-        run: python main.py
+        run: uv run --with-requirements requirements.txt python main.py
 
       - name: Commit updated records
         # Skip commit when dry-run is on (data.yaml won't have changed)
