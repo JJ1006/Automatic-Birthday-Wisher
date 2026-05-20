@@ -1,1 +1,0 @@
-"D:\python3.9\python.exe" "D:\Visual Studio Code\python projects\Automatic-Birthday-Wisher\main.py"

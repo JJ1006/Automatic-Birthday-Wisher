@@ -4,42 +4,59 @@ on:
   schedule:
     # Runs daily at 13:00 UTC (~9:00 AM Toronto during EDT; 8:00 AM during EST)
     - cron: "0 13 * * *"
-  workflow_dispatch: {}  # manual run button
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — log who would be wished without sending any emails"
+        type: boolean
+        default: false
+      override_date:
+        description: "Check a specific date instead of today (MM-DD, e.g. 07-19)"
+        type: string
+        default: ""
+      force_resend:
+        description: "Force send even if already wished this year"
+        type: boolean
+        default: false
 
 permissions:
-  contents: write   # needed if you want to commit updated data.xlsx
+  contents: write
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: uv pip install -r requirements.txt --system
 
-      - name: Run script
+      - name: Run birthday wisher
         env:
           GMAIL_ID: ${{ secrets.GMAIL_ID }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          OVERRIDE_DATE: ${{ inputs.override_date || '' }}
+          FORCE_RESEND: ${{ inputs.force_resend || 'false' }}
         run: python main.py
 
-      # Optional: commit data.xlsx if it changed
-      - name: Commit changes (if any)
+      - name: Commit updated records
+        # Skip commit when dry-run is on (data.yaml won't have changed)
+        if: ${{ inputs.dry_run != true }}
         run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
+          if [[ -n "$(git status --porcelain data.yaml)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "chore: update data.xlsx [skip ci]"
+            git add data.yaml
+            git commit -m "chore: update birthday records [skip ci]"
             git push
           else
             echo "No changes to commit."
